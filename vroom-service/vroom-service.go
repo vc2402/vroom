@@ -79,9 +79,9 @@ func (h vroomHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
-	defer stdIn.Close()
 	stdOut, err := command.StdoutPipe()
 	if err != nil {
+		stdIn.Close()
 		log.Printf("error: can not get stdout: %v", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
@@ -89,6 +89,7 @@ func (h vroomHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer stdOut.Close()
 	stdErr, err := command.StderrPipe()
 	if err != nil {
+		stdIn.Close()
 		log.Printf("error: can not get stdErr: %v", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
@@ -96,11 +97,13 @@ func (h vroomHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer stdErr.Close()
 	err = command.Start()
 	if err != nil {
+		stdIn.Close()
 		log.Printf("error: when starting: %v", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 	count, err := io.Copy(stdIn, r.Body)
+	stdIn.Close()
 	if err != nil {
 		log.Printf("error: when copying to stdin: %v", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
@@ -109,31 +112,28 @@ func (h vroomHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if h.logLevel == LevelVerbose {
 		log.Printf("%d bytes request was passed to vroom", r.ContentLength)
 	}
-	err = command.Wait()
-	if err != nil {
-		log.Printf("error: when waiting: %v", err)
-		http.Error(w, "internal error", http.StatusInternalServerError)
-		return
-	}
 	errors, err := io.ReadAll(stdErr)
-	if err != nil {
-		log.Printf("error: when getting error: %v", err)
-		http.Error(w, "internal error", http.StatusInternalServerError)
+	if err != nil || len(errors) > 0 {
+		if err != nil {
+			log.Printf("error: when getting error: %v", err)
+			http.Error(w, "internal error", http.StatusInternalServerError)
+		} else {
+			log.Printf("error: errors got from vroom executable: %s", string(errors))
+			http.Error(w, string(errors), http.StatusInternalServerError)
+		}
+	} else {
+		count, err = io.Copy(w, stdOut)
+		if err != nil {
+			log.Printf("error: when getting result from vrrom binary: %v", err)
+			http.Error(w, "internal error", http.StatusInternalServerError)
+		}
+	}
+	_ = command.Wait()
+	if err != nil || len(errors) > 0 {
 		return
 	}
-	if len(errors) > 0 {
-		log.Printf("error: errors got from vroom executable: %s", string(errors))
-		http.Error(w, string(errors), http.StatusInternalServerError)
-		return
-	}
-	count, err = io.Copy(w, stdOut)
-	if err != nil {
-		log.Printf("error: when getting result from vrrom binary: %v", err)
-		http.Error(w, "internal error", http.StatusInternalServerError)
-		return
-	}
+	w.Header().Set("Content-Type", "application/json")
 	if h.logLevel >= LevelInfo {
 		log.Printf("request was processed: %s %d/%d (%d ms)", r.RemoteAddr, r.ContentLength, count, time.Since(start)/time.Millisecond)
 	}
-	w.Header().Set("Content-Type", "application/json")
 }
