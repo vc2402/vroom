@@ -9,10 +9,10 @@ type Job struct {
 	//Setup         int     `json:"setup"`
 	//Service       int     `json:"service"`
 	ShipmentStep
-	TimeWindows [][]int `json:"time_windows"`
-	Delivery    []int   `json:"delivery"`
-	Pickup      []int   `json:"pickup"`
-	Skills      []int   `json:"skills"`
+	TimeWindows [][]int `json:"time_windows,omitempty"`
+	Delivery    []int   `json:"delivery,omitempty"`
+	Pickup      []int   `json:"pickup,omitempty"`
+	Skills      []int   `json:"skills,omitempty"`
 	Priority    int     `json:"priority"`
 
 	problem *Problem

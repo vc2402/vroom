@@ -16,17 +16,23 @@ const (
 var ErrLocationNotDefined = errors.New("location is not defined")
 
 type Problem struct {
-	Vehicles     []*Vehicle `json:"vehicles"`
-	Jobs         []*Job     `json:"jobs"`
-	Shipments    []*Shipment
+	Vehicles     []*Vehicle  `json:"vehicles"`
+	Jobs         []*Job      `json:"jobs,omitempty"`
+	Shipments    []*Shipment `json:"shipments,omitempty"`
 	locations    map[int]Location
 	measurements map[Measurement]int
 	jobsCount    int
 	err          error
 }
 
-func (p *Problem) NewVehicle() *Vehicle {
-	v := &Vehicle{Id: len(p.Vehicles), problem: p}
+func (p *Problem) NewVehicle(id ...int) *Vehicle {
+	var vehId int
+	if len(id) > 0 {
+		vehId = id[0]
+	} else {
+		vehId = len(p.Vehicles)
+	}
+	v := &Vehicle{Id: vehId, problem: p}
 	p.AddVehicle(v)
 	return v
 }
@@ -36,8 +42,14 @@ func (p *Problem) AddVehicle(v *Vehicle) *Problem {
 	return p
 }
 
-func (p *Problem) NewJob() *Job {
-	j := &Job{ShipmentStep: ShipmentStep{Id: p.NextJobId()}, problem: p}
+func (p *Problem) NewJob(id ...int) *Job {
+	var jid int
+	if len(id) > 0 {
+		jid = id[0]
+	} else {
+		jid = p.NextJobId()
+	}
+	j := &Job{ShipmentStep: ShipmentStep{Id: jid}, problem: p}
 	p.AddJob(j)
 	return j
 }
@@ -47,8 +59,14 @@ func (p *Problem) AddJob(j *Job) *Problem {
 	return p
 }
 
-func (p *Problem) NewShipment() *Shipment {
-	j := &Shipment{Pickup: ShipmentStep{Id: p.NextJobId()}, Delivery: ShipmentStep{Id: p.NextJobId()}, problem: p}
+func (p *Problem) NewShipment(id ...int) *Shipment {
+	var jid int
+	if len(id) > 0 {
+		jid = id[0]
+	} else {
+		jid = p.NextJobId()
+	}
+	j := &Shipment{Pickup: ShipmentStep{Id: jid}, Delivery: ShipmentStep{Id: p.NextJobId()}, problem: p}
 	p.AddShipment(j)
 	return j
 }

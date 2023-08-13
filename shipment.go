@@ -2,20 +2,20 @@ package vroom
 
 type ShipmentStep struct {
 	Id            int       `json:"id"`
-	Description   string    `json:"description"`
-	Location      *Location `json:"location"`
-	LocationIndex *int      `json:"location_index"`
+	Description   string    `json:"description,omitempty"`
+	Location      *Location `json:"location,omitempty"`
+	LocationIndex *int      `json:"location_index,omitempty"`
 	locationID    *int
-	Setup         int     `json:"setup"`
-	Service       int     `json:"service"`
-	TimeWindows   [][]int `json:"time_windows"`
+	Setup         int     `json:"setup,omitempty"`
+	Service       int     `json:"service,omitempty"`
+	TimeWindows   [][]int `json:"time_windows,omitempty"`
 }
 
 type Shipment struct {
 	Pickup   ShipmentStep `json:"pickup"`
 	Delivery ShipmentStep `json:"delivery"`
-	Amount   []int        `json:"amount"`
-	Skills   []int        `json:"skills"`
+	Amount   []int        `json:"amount,omitempty"`
+	Skills   []int        `json:"skills,omitempty"`
 	Priority int          `json:"priority"`
 	problem  *Problem
 }

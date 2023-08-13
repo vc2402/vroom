@@ -8,19 +8,19 @@ const (
 
 type Vehicle struct {
 	Id          int            `json:"id"`
-	Profile     VehicleProfile `json:"profile"`
-	Description string         `json:"description"`
-	Start       *Location      `json:"start"`
-	StartIndex  *int           `json:"start_index"`
+	Profile     VehicleProfile `json:"profile,omitempty"`
+	Description string         `json:"description,omitempty"`
+	Start       *Location      `json:"start,omitempty"`
+	StartIndex  *int           `json:"start_index,omitempty"`
 	startID     *int
-	End         *Location `json:"end"`
-	EndIndex    *int      `json:"end_index"`
+	End         *Location `json:"end,omitempty"`
+	EndIndex    *int      `json:"end_index,omitempty"`
 	endID       *int
-	Capacity    []int `json:"capacity"`
-	Costs       []int `json:"costs"`
-	Skills      []int `json:"skills"`
-	TimeWindow  []int `json:"time_window"`
-	Breaks      []int `json:"breaks"`
+	Capacity    []int `json:"capacity,omitempty"`
+	Costs       []int `json:"costs,omitempty"`
+	Skills      []int `json:"skills,omitempty"`
+	TimeWindow  []int `json:"time_window,omitempty"`
+	Breaks      []int `json:"breaks,omitempty"`
 	problem     *Problem
 }
 
