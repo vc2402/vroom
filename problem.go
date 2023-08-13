@@ -30,7 +30,7 @@ func (p *Problem) NewVehicle(id ...int) *Vehicle {
 	if len(id) > 0 {
 		vehId = id[0]
 	} else {
-		vehId = len(p.Vehicles)
+		vehId = len(p.Vehicles) + 1
 	}
 	v := &Vehicle{Id: vehId, problem: p}
 	p.AddVehicle(v)
@@ -60,13 +60,19 @@ func (p *Problem) AddJob(j *Job) *Problem {
 }
 
 func (p *Problem) NewShipment(id ...int) *Shipment {
-	var jid int
+	var jid1 int
 	if len(id) > 0 {
-		jid = id[0]
+		jid1 = id[0]
 	} else {
-		jid = p.NextJobId()
+		jid1 = p.NextJobId()
 	}
-	j := &Shipment{Pickup: ShipmentStep{Id: jid}, Delivery: ShipmentStep{Id: p.NextJobId()}, problem: p}
+	var jid2 int
+	if len(id) > 1 {
+		jid2 = id[1]
+	} else {
+		jid2 = p.NextJobId()
+	}
+	j := &Shipment{Pickup: ShipmentStep{Id: jid1}, Delivery: ShipmentStep{Id: jid2}, problem: p}
 	p.AddShipment(j)
 	return j
 }
@@ -81,7 +87,11 @@ func (p *Problem) GetMeasurementIndex(measurement Measurement) int {
 		return idx
 	}
 	idx := len(p.measurements)
-	p.measurements[measurement] = idx
+	if idx == 0 {
+		p.measurements = map[Measurement]int{measurement: idx}
+	} else {
+		p.measurements[measurement] = idx
+	}
 	return idx
 }
 
@@ -97,7 +107,7 @@ func (p *Problem) SetCapacity(measurement Measurement, val int, capacities []int
 }
 
 func (p *Problem) NextJobId() (id int) {
-	id = p.jobsCount
+	id = p.jobsCount + 1
 	p.jobsCount++
 	return
 }
@@ -124,6 +134,8 @@ func (p *Problem) GetLocation(id int) (loc Location, err error) {
 	}
 	return
 }
+
+func (p *Problem) Err() error { return p.err }
 
 func (p *Problem) processLocations() {
 	if len(p.locations) > 0 {
