@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"io"
@@ -26,6 +27,8 @@ type vroomHandler struct {
 	pathToVRoom  string
 	vroomOptions []string
 	logLevel     LogLevel
+	traceIncomig bool
+	traceOutgoig bool
 }
 
 func main() {
@@ -34,6 +37,8 @@ func main() {
 	executable := flag.String("vroom", "./vroom", "path to vroom executable")
 	verbose := flag.Bool("verbose", false, "log some messages")
 	verbosest := flag.Bool("verbosest", false, "log impossibly much messages")
+	traceIncomig := flag.Bool("traceIncoming", false, "trace incoming messages")
+	traceOutgoig := flag.Bool("traceOutgoig", false, "trace outgoing messages")
 	flag.Usage = func() {
 		fmt.Printf("usage: %s [flags] [ -- options-to-vroom]\n", os.Args[0])
 		flag.PrintDefaults()
@@ -45,6 +50,8 @@ func main() {
 		port:         *port,
 		pathToVRoom:  *executable,
 		vroomOptions: flag.Args(),
+		traceIncomig: *traceIncomig,
+		traceOutgoig: *traceOutgoig,
 	}
 	if *verbose {
 		h.logLevel = LevelInfo
@@ -102,7 +109,16 @@ func (h vroomHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
-	count, err := io.Copy(stdIn, r.Body)
+	var count int64
+	if h.traceIncomig {
+		var buf bytes.Buffer
+		count, err = io.Copy(stdIn, io.TeeReader(r.Body, &buf))
+		log.Print("incoming message: \n\t")
+		incoming, _ := io.ReadAll(&buf)
+		log.Println(string(incoming))
+	} else {
+		count, err = io.Copy(stdIn, r.Body)
+	}
 	stdIn.Close()
 	if err != nil {
 		log.Printf("error: when copying to stdin: %v", err)
@@ -122,7 +138,16 @@ func (h vroomHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, string(errors), http.StatusInternalServerError)
 		}
 	} else {
-		count, err = io.Copy(w, stdOut)
+		if h.traceOutgoig {
+			var buf bytes.Buffer
+			count, err = io.Copy(w, io.TeeReader(stdOut, &buf))
+			log.Print("outgoing message: \n\t")
+			incoming, _ := io.ReadAll(&buf)
+			log.Println(string(incoming))
+		} else {
+			count, err = io.Copy(w, stdOut)
+		}
+
 		if err != nil {
 			log.Printf("error: when getting result from vrrom binary: %v", err)
 			http.Error(w, "internal error", http.StatusInternalServerError)
