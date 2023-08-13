@@ -113,9 +113,8 @@ func (h vroomHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if h.traceIncomig {
 		var buf bytes.Buffer
 		count, err = io.Copy(stdIn, io.TeeReader(r.Body, &buf))
-		log.Print("incoming message: \n\t")
 		incoming, _ := io.ReadAll(&buf)
-		log.Println(string(incoming))
+		log.Print("incoming message: \n\t", string(incoming))
 	} else {
 		count, err = io.Copy(stdIn, r.Body)
 	}
@@ -141,9 +140,8 @@ func (h vroomHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if h.traceOutgoig {
 			var buf bytes.Buffer
 			count, err = io.Copy(w, io.TeeReader(stdOut, &buf))
-			log.Print("outgoing message: \n\t")
-			incoming, _ := io.ReadAll(&buf)
-			log.Println(string(incoming))
+			outgoing, _ := io.ReadAll(&buf)
+			log.Print("outgoing message: \n\t", string(outgoing))
 		} else {
 			count, err = io.Copy(w, stdOut)
 		}
