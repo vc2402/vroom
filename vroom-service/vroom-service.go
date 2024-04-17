@@ -80,54 +80,69 @@ func (h vroomHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	command := exec.Command(h.pathToVRoom, h.vroomOptions...)
-	stdIn, err := command.StdinPipe()
-	if err != nil {
-		log.Printf("error: can not get stdin: %v", err)
-		http.Error(w, "internal error", http.StatusInternalServerError)
-		return
-	}
-	stdOut, err := command.StdoutPipe()
-	if err != nil {
-		stdIn.Close()
-		log.Printf("error: can not get stdout: %v", err)
-		http.Error(w, "internal error", http.StatusInternalServerError)
-		return
-	}
-	defer stdOut.Close()
-	stdErr, err := command.StderrPipe()
-	if err != nil {
-		stdIn.Close()
-		log.Printf("error: can not get stdErr: %v", err)
-		http.Error(w, "internal error", http.StatusInternalServerError)
-		return
-	}
-	defer stdErr.Close()
-	err = command.Start()
-	if err != nil {
-		stdIn.Close()
-		log.Printf("error: when starting: %v", err)
-		http.Error(w, "internal error", http.StatusInternalServerError)
-		return
-	}
+	//stdIn, err := command.StdinPipe()
+	//if err != nil {
+	//  log.Printf("error: can not get stdin: %v", err)
+	//  http.Error(w, "internal error", http.StatusInternalServerError)
+	//  return
+	//}
+	//stdOut, err := command.StdoutPipe()
+	//if err != nil {
+	//  stdIn.Close()
+	//  log.Printf("error: can not get stdout: %v", err)
+	//  http.Error(w, "internal error", http.StatusInternalServerError)
+	//  return
+	//}
+	//defer stdOut.Close()
+	//
+	//stdErr, err := command.StderrPipe()
+	//if err != nil {
+	//  stdIn.Close()
+	//  log.Printf("error: can not get stdErr: %v", err)
+	//  http.Error(w, "internal error", http.StatusInternalServerError)
+	//  return
+	//}
+	//defer stdErr.Close()
+	//err = command.Start()
+	//if err != nil {
+	//  stdIn.Close()
+	//  log.Printf("error: when starting: %v", err)
+	//  http.Error(w, "internal error", http.StatusInternalServerError)
+	//  return
+	//}
+	command.Stdin = r.Body
+	var stdOut, stdErr bytes.Buffer
+	command.Stdout = &stdOut
+	command.Stderr = &stdErr
+	//var count int64
+	//if h.traceIncomig {
+	//  var buf bytes.Buffer
+	//  count, err = io.Copy(stdIn, io.TeeReader(r.Body, &buf))
+	//  incoming, _ := io.ReadAll(&buf)
+	//  log.Print("incoming message: \n\t", string(incoming))
+	//} else {
+	//  count, err = io.Copy(stdIn, r.Body)
+	//}
+	//stdIn.Close()
+	//if err != nil {
+	//  log.Printf("error: when copying to stdin: %v", err)
+	//  http.Error(w, "internal error", http.StatusInternalServerError)
+	//  return
+	//}
+	//if h.logLevel == LevelVerbose {
+	//  log.Printf("%d bytes request was passed to vroom", r.ContentLength)
+	//}
+
+	//if h.logLevel == LevelVerbose {
+	//  log.Println("going to read from stderr")
+	//}
+	//errors, err := io.ReadAll(stdErr)
+	//if h.logLevel == LevelVerbose {
+	//  log.Printf("%d bytes was read from stderr", len(errors))
+	//}
+	err := command.Run()
+	errors := stdErr.Bytes()
 	var count int64
-	if h.traceIncomig {
-		var buf bytes.Buffer
-		count, err = io.Copy(stdIn, io.TeeReader(r.Body, &buf))
-		incoming, _ := io.ReadAll(&buf)
-		log.Print("incoming message: \n\t", string(incoming))
-	} else {
-		count, err = io.Copy(stdIn, r.Body)
-	}
-	stdIn.Close()
-	if err != nil {
-		log.Printf("error: when copying to stdin: %v", err)
-		http.Error(w, "internal error", http.StatusInternalServerError)
-		return
-	}
-	if h.logLevel == LevelVerbose {
-		log.Printf("%d bytes request was passed to vroom", r.ContentLength)
-	}
-	errors, err := io.ReadAll(stdErr)
 	if err != nil || len(errors) > 0 {
 		if err != nil {
 			log.Printf("error: when getting error: %v", err)
@@ -138,12 +153,25 @@ func (h vroomHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		if h.traceOutgoig {
+			if h.logLevel == LevelVerbose {
+				log.Println("going to read from stdout")
+			}
 			var buf bytes.Buffer
-			count, err = io.Copy(w, io.TeeReader(stdOut, &buf))
+			count, err = io.Copy(w, io.TeeReader(&stdOut, &buf))
+			if err != nil {
+				log.Printf("error: when copying output: %v", err)
+				http.Error(w, "internal error", http.StatusInternalServerError)
+			}
 			outgoing, _ := io.ReadAll(&buf)
 			log.Print("outgoing message: \n\t", string(outgoing))
 		} else {
-			count, err = io.Copy(w, stdOut)
+			if h.logLevel == LevelVerbose {
+				log.Println("going to read from stdout")
+			}
+			count, err = io.Copy(w, &stdOut)
+			if h.logLevel == LevelVerbose {
+				log.Printf("%d bytes were read from stdout", count)
+			}
 		}
 
 		if err != nil {
@@ -151,12 +179,18 @@ func (h vroomHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "internal error", http.StatusInternalServerError)
 		}
 	}
-	_ = command.Wait()
+	//_ = command.Wait()
 	if err != nil || len(errors) > 0 {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
 	if h.logLevel >= LevelInfo {
-		log.Printf("request was processed: %s %d/%d (%d ms)", r.RemoteAddr, r.ContentLength, count, time.Since(start)/time.Millisecond)
+		log.Printf(
+			"request was processed: %s %d/%d (%d ms)",
+			r.RemoteAddr,
+			r.ContentLength,
+			count,
+			time.Since(start)/time.Millisecond,
+		)
 	}
 }
