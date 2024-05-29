@@ -14,15 +14,17 @@ func main() {
 	}
 	problem := &vroom.Problem{}
 	//timeWindow := []int{0, 7}
-	problem.NewVehicle().SetStartId(10) //.SetTimeWindow(timeWindow).SetMeasuredCapacity(vroom.MeasWeight, 1000).SetMeasuredCapacity(vroom.MeasVolume, 100)
-	problem.NewVehicle().SetStartId(10) //.SetTimeWindow(timeWindow)
+	problem.NewVehicle().SetStartId(10).SetMeasuredCapacity(vroom.MeasWeight, 1000).SetMeasuredCapacity(vroom.MeasVolume, 100) //.SetTimeWindow(timeWindow)
+	problem.NewVehicle().SetStartId(10)                                                                                        //.SetTimeWindow(timeWindow)
 	//shipment :=
-	problem.NewShipment().SetPickupLocationId(10).SetDeliveryLocationId(12)
+	problem.NewShipment().SetPickupLocationId(10).SetDeliveryLocationId(12).
+		SetMeasuredAmount(vroom.MeasWeight, 200).SetMeasuredAmount(vroom.MeasVolume, 20)
 	//shipment.Pickup.SetTimeWindows([][]int{timeWindow})
 	//shipment.Delivery.SetTimeWindows([][]int{timeWindow})
 
 	//shipment =
-	problem.NewShipment().SetPickupLocationId(10).SetDeliveryLocationId(14)
+	problem.NewShipment().SetPickupLocationId(10).SetDeliveryLocationId(14).
+		SetMeasuredAmount(vroom.MeasWeight, 200).SetMeasuredAmount(vroom.MeasVolume, 20)
 	//shipment.Pickup.SetTimeWindows([][]int{timeWindow})
 	//shipment.Delivery.SetTimeWindows([][]int{timeWindow})
 	//problem.NewJob().SetLocationId(10).SetMeasuredPickup(vroom.MeasWeight, 1000).SetMeasuredPickup(vroom.MeasVolume, 100)

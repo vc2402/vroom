@@ -80,66 +80,21 @@ func (h vroomHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	command := exec.Command(h.pathToVRoom, h.vroomOptions...)
-	//stdIn, err := command.StdinPipe()
-	//if err != nil {
-	//  log.Printf("error: can not get stdin: %v", err)
-	//  http.Error(w, "internal error", http.StatusInternalServerError)
-	//  return
-	//}
-	//stdOut, err := command.StdoutPipe()
-	//if err != nil {
-	//  stdIn.Close()
-	//  log.Printf("error: can not get stdout: %v", err)
-	//  http.Error(w, "internal error", http.StatusInternalServerError)
-	//  return
-	//}
-	//defer stdOut.Close()
-	//
-	//stdErr, err := command.StderrPipe()
-	//if err != nil {
-	//  stdIn.Close()
-	//  log.Printf("error: can not get stdErr: %v", err)
-	//  http.Error(w, "internal error", http.StatusInternalServerError)
-	//  return
-	//}
-	//defer stdErr.Close()
-	//err = command.Start()
-	//if err != nil {
-	//  stdIn.Close()
-	//  log.Printf("error: when starting: %v", err)
-	//  http.Error(w, "internal error", http.StatusInternalServerError)
-	//  return
-	//}
-	command.Stdin = r.Body
+	if h.traceIncomig {
+		if h.logLevel == LevelVerbose {
+			log.Println("going to read from stdout")
+		}
+		var buf bytes.Buffer
+		tee := io.TeeReader(r.Body, &buf)
+		command.Stdin = &buf
+		incoming, _ := io.ReadAll(tee)
+		log.Print("incoming message: \n\t", string(incoming))
+	} else {
+		command.Stdin = r.Body
+	}
 	var stdOut, stdErr bytes.Buffer
 	command.Stdout = &stdOut
 	command.Stderr = &stdErr
-	//var count int64
-	//if h.traceIncomig {
-	//  var buf bytes.Buffer
-	//  count, err = io.Copy(stdIn, io.TeeReader(r.Body, &buf))
-	//  incoming, _ := io.ReadAll(&buf)
-	//  log.Print("incoming message: \n\t", string(incoming))
-	//} else {
-	//  count, err = io.Copy(stdIn, r.Body)
-	//}
-	//stdIn.Close()
-	//if err != nil {
-	//  log.Printf("error: when copying to stdin: %v", err)
-	//  http.Error(w, "internal error", http.StatusInternalServerError)
-	//  return
-	//}
-	//if h.logLevel == LevelVerbose {
-	//  log.Printf("%d bytes request was passed to vroom", r.ContentLength)
-	//}
-
-	//if h.logLevel == LevelVerbose {
-	//  log.Println("going to read from stderr")
-	//}
-	//errors, err := io.ReadAll(stdErr)
-	//if h.logLevel == LevelVerbose {
-	//  log.Printf("%d bytes was read from stderr", len(errors))
-	//}
 	err := command.Run()
 	errors := stdErr.Bytes()
 	var count int64
